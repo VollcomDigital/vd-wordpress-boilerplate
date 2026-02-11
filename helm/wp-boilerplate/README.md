@@ -37,6 +37,12 @@ You can either:
 - Provide `secret.existingSecret`, or
 - Set `secret.create=true` and populate `secret.data` (not recommended)
 
+Examples:
+
+- `docs/kubernetes/external-secrets/`
+- `docs/kubernetes/sealed-secrets/`
+- `docs/kubernetes/secrets-required.md`
+
 Expected Secret keys include:
 
 - `DB_PASSWORD`

@@ -124,6 +124,15 @@ In production, you should disable the built-in pseudo-cron and run a real schedu
 - Set `DISABLE_WP_CRON=true`
 - Use a Kubernetes `CronJob` (template included) or an external scheduler to trigger cron processing
 
+## Secrets on Kubernetes
+
+Recommended approaches:
+
+- External Secrets Operator (ESO)
+- SealedSecrets
+
+See `docs/kubernetes/` for templates and required keys.
+
 ---
 
 ## License

@@ -1,0 +1,59 @@
+# Example values override for a real cluster.
+#
+# Usage:
+#   helm upgrade --install wp ./helm/wp-boilerplate \
+#     -n wp --create-namespace \
+#     -f docs/kubernetes/helm-values-production.example.yaml
+
+image:
+  php:
+    repository: ghcr.io/OWNER/REPO-php
+    digest: sha256:REPLACE_ME
+  web:
+    repository: ghcr.io/OWNER/REPO-nginx
+    digest: sha256:REPLACE_ME
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations: {}
+  hosts:
+    - host: wp.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: wp-tls
+      hosts:
+        - wp.example.com
+
+env:
+  WP_ENV: production
+  WP_HOME: https://wp.example.com
+  WP_SITEURL: https://wp.example.com/wp
+
+  # Production guidance
+  DISABLE_WP_CRON: "true"
+  DISALLOW_FILE_MODS: "true"
+
+  # DB connection (password is stored in Secret)
+  DB_HOST: my-db.example.com:3306
+  DB_NAME: wordpress
+  DB_USER: wordpress
+
+config:
+  existingConfigMap: ""  # or set to an existing ConfigMap name
+
+secret:
+  existingSecret: wp-secrets
+
+# Recommended: offload uploads to S3-compatible object storage.
+uploads:
+  persistence:
+    enabled: false
+
+# Optional: run WP-Cron via a real scheduler.
+cron:
+  enabled: true
+  schedule: "*/5 * * * *"
+
