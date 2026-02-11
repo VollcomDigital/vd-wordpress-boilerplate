@@ -1,0 +1,1 @@
+# vd-wordpress-boilerplate
