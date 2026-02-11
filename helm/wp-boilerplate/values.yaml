@@ -1,0 +1,140 @@
+replicaCount: 1
+
+image:
+  php:
+    repository: ghcr.io/OWNER/REPO-php
+    tag: ""
+    digest: ""
+    pullPolicy: IfNotPresent
+  web:
+    repository: ghcr.io/OWNER/REPO-nginx
+    tag: ""
+    digest: ""
+    pullPolicy: IfNotPresent
+
+serviceAccount:
+  create: false
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext:
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  php:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    runAsNonRoot: true
+    runAsUser: 10001
+    capabilities:
+      drop: ["ALL"]
+  web:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    runAsNonRoot: true
+    runAsUser: 101
+    capabilities:
+      drop: ["ALL"]
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8080
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: wp.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+resources:
+  php: {}
+  web: {}
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+
+pdb:
+  enabled: false
+  minAvailable: 1
+
+networkPolicy:
+  enabled: false
+
+env:
+  # Bedrock expects these env vars (do NOT store secrets in values.yaml).
+  WP_ENV: production
+  WP_HOME: https://wp.example.com
+  WP_SITEURL: https://wp.example.com/wp
+
+  # Production guidance: disable WP-Cron and run a real scheduler.
+  DISABLE_WP_CRON: "true"
+
+  # Production hardening (can be overridden for non-prod).
+  DISALLOW_FILE_MODS: "true"
+  WP_CACHE: "false"
+  WP_DEFAULT_THEME: starter-theme
+
+  # Optional Redis object cache (requires a Redis cache plugin)
+  WP_REDIS_HOST: ""
+  WP_REDIS_PORT: "6379"
+
+  # DB non-secret parts (password must come from a Secret)
+  DB_HOST: ""
+  DB_NAME: ""
+  DB_USER: ""
+  DB_PREFIX: wp_
+
+  extra: []
+  # extra:
+  #   - name: SOME_VAR
+  #     value: "some-value"
+
+config:
+  # If set, chart will use this existing ConfigMap for env vars instead of creating one.
+  existingConfigMap: ""
+
+secret:
+  # Prefer External Secrets / SealedSecrets. This chart supports either:
+  # - referencing an existing Secret, or
+  # - creating a Secret from values (not recommended for real environments).
+  existingSecret: ""
+  create: false
+  data: {}
+  # data:
+  #   DB_PASSWORD: "..."
+  #   AUTH_KEY: "..."
+  #   SECURE_AUTH_KEY: "..."
+  #   LOGGED_IN_KEY: "..."
+  #   NONCE_KEY: "..."
+  #   AUTH_SALT: "..."
+  #   SECURE_AUTH_SALT: "..."
+  #   LOGGED_IN_SALT: "..."
+  #   NONCE_SALT: "..."
+
+uploads:
+  persistence:
+    enabled: false
+    existingClaim: ""
+    storageClass: ""
+    accessModes: ["ReadWriteOnce"]
+    size: 10Gi
+
+cron:
+  enabled: false
+  schedule: "*/5 * * * *"
+  image:
+    repository: curlimages/curl
+    tag: "8.6.0"
+  urlPath: "/wp/wp-cron.php?doing_wp_cron"
+

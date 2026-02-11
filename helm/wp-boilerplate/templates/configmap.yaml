@@ -1,0 +1,26 @@
+{{- if not .Values.config.existingConfigMap -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "wp-boilerplate.fullname" . }}-env
+  labels:
+    {{- include "wp-boilerplate.labels" . | nindent 4 }}
+data:
+  WP_ENV: {{ .Values.env.WP_ENV | quote }}
+  WP_HOME: {{ .Values.env.WP_HOME | quote }}
+  WP_SITEURL: {{ .Values.env.WP_SITEURL | quote }}
+
+  DISABLE_WP_CRON: {{ .Values.env.DISABLE_WP_CRON | quote }}
+  DISALLOW_FILE_MODS: {{ .Values.env.DISALLOW_FILE_MODS | quote }}
+  WP_CACHE: {{ .Values.env.WP_CACHE | quote }}
+  WP_DEFAULT_THEME: {{ .Values.env.WP_DEFAULT_THEME | quote }}
+
+  WP_REDIS_HOST: {{ .Values.env.WP_REDIS_HOST | quote }}
+  WP_REDIS_PORT: {{ .Values.env.WP_REDIS_PORT | quote }}
+
+  DB_HOST: {{ .Values.env.DB_HOST | quote }}
+  DB_NAME: {{ .Values.env.DB_NAME | quote }}
+  DB_USER: {{ .Values.env.DB_USER | quote }}
+  DB_PREFIX: {{ .Values.env.DB_PREFIX | quote }}
+{{- end }}
+

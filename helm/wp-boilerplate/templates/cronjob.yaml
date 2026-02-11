@@ -1,0 +1,42 @@
+{{- if .Values.cron.enabled -}}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "wp-boilerplate.fullname" . }}-cron
+  labels:
+    {{- include "wp-boilerplate.labels" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.cron.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            {{- include "wp-boilerplate.selectorLabels" . | nindent 12 }}
+        spec:
+          restartPolicy: OnFailure
+          securityContext:
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: wp-cron
+              image: {{ printf "%s:%s" .Values.cron.image.repository .Values.cron.image.tag }}
+              imagePullPolicy: IfNotPresent
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                runAsNonRoot: true
+                capabilities:
+                  drop: ["ALL"]
+              command:
+                - /bin/sh
+                - -c
+                - >
+                  curl -fsSL
+                  "http://{{ include "wp-boilerplate.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.service.port }}{{ .Values.cron.urlPath }}"
+                  >/dev/null
+{{- end }}
+

@@ -1,0 +1,110 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "wp-boilerplate.fullname" . }}
+  labels:
+    {{- include "wp-boilerplate.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "wp-boilerplate.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "wp-boilerplate.selectorLabels" . | nindent 8 }}
+      annotations:
+        {{- toYaml .Values.podAnnotations | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "wp-boilerplate.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      volumes:
+        - name: php-socket
+          emptyDir: {}
+        - name: tmp
+          emptyDir:
+            medium: Memory
+        - name: nginx-cache
+          emptyDir: {}
+        - name: uploads
+{{ if .Values.uploads.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ default (printf "%s-uploads" (include "wp-boilerplate.fullname" .)) .Values.uploads.persistence.existingClaim }}
+{{ else }}
+          emptyDir: {}
+{{ end }}
+        - name: app-cache
+          emptyDir: {}
+
+      containers:
+        - name: web
+          image: {{ include "wp-boilerplate.imageRef" .Values.image.web }}
+          imagePullPolicy: {{ .Values.image.web.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.targetPort }}
+          securityContext:
+            {{- toYaml .Values.securityContext.web | nindent 12 }}
+          volumeMounts:
+            - name: php-socket
+              mountPath: /var/run/php
+            - name: tmp
+              mountPath: /tmp
+            - name: nginx-cache
+              mountPath: /var/cache/nginx
+            - name: uploads
+              mountPath: /var/www/html/web/app/uploads
+            - name: app-cache
+              mountPath: /var/www/html/web/app/cache
+          readinessProbe:
+            httpGet:
+              path: /ping
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 6
+          resources:
+            {{- toYaml .Values.resources.web | nindent 12 }}
+
+        - name: php
+          image: {{ include "wp-boilerplate.imageRef" .Values.image.php }}
+          imagePullPolicy: {{ .Values.image.php.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.securityContext.php | nindent 12 }}
+          envFrom:
+            - configMapRef:
+                name: {{ default (printf "%s-env" (include "wp-boilerplate.fullname" .)) .Values.config.existingConfigMap }}
+            {{- if .Values.secret.existingSecret }}
+            - secretRef:
+                name: {{ .Values.secret.existingSecret }}
+            {{- else if .Values.secret.create }}
+            - secretRef:
+                name: {{ include "wp-boilerplate.fullname" . }}-secret
+            {{- end }}
+          env:
+            {{- range .Values.env.extra }}
+            - name: {{ .name }}
+              value: {{ .value | quote }}
+            {{- end }}
+          volumeMounts:
+            - name: php-socket
+              mountPath: /var/run/php
+            - name: tmp
+              mountPath: /tmp
+            - name: uploads
+              mountPath: /var/www/html/web/app/uploads
+            - name: app-cache
+              mountPath: /var/www/html/web/app/cache
+          resources:
+            {{- toYaml .Values.resources.php | nindent 12 }}
+
