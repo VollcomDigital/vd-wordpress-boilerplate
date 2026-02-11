@@ -70,7 +70,14 @@ FROM php-base AS php-runtime
 
 WORKDIR /var/www/html
 
-RUN addgroup -g 10001 -S app && adduser -u 10001 -S -G app app
+RUN set -eux; \
+  addgroup -g 10001 -S app; \
+  adduser -u 10001 -S -G app app; \
+  # Ensure the PHP user can create an FPM socket readable by the nginx-unprivileged
+  # container (uid/gid 101).
+  group101="$(awk -F: '$3==101{print $1; exit}' /etc/group)"; \
+  if [ -z "$group101" ]; then addgroup -g 101 -S web; group101="web"; fi; \
+  addgroup app "$group101" || true
 
 # Replace the default pool with our socket-based pool.
 RUN rm -f /usr/local/etc/php-fpm.d/www.conf
@@ -101,9 +108,17 @@ CMD ["php-fpm", "-F"]
 # -----------------------------------------------------------------------------
 FROM php-base AS php-dev
 
+ARG APP_UID=1000
+ARG APP_GID=1000
+
 WORKDIR /var/www/html
 
-RUN addgroup -g 10001 -S app && adduser -u 10001 -S -G app app
+RUN set -eux; \
+  addgroup -g "${APP_GID}" -S app; \
+  adduser -u "${APP_UID}" -S -G app app; \
+  group101="$(awk -F: '$3==101{print $1; exit}' /etc/group)"; \
+  if [ -z "$group101" ]; then addgroup -g 101 -S web; group101="web"; fi; \
+  addgroup app "$group101" || true
 
 RUN rm -f /usr/local/etc/php-fpm.d/www.conf
 COPY docker/php/fpm-pool.conf /usr/local/etc/php-fpm.d/zz-app.conf

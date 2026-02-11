@@ -19,6 +19,10 @@ serviceAccount:
 podAnnotations: {}
 
 podSecurityContext:
+  # Required for non-root containers writing to emptyDir/PVC mounts.
+  # 101 matches the nginx-unprivileged uid/gid and is added as a supplementary
+  # group for the PHP user in the provided image.
+  fsGroup: 101
   seccompProfile:
     type: RuntimeDefault
 

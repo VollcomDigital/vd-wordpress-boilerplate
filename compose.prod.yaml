@@ -12,6 +12,7 @@ services:
       - ALL
     tmpfs:
       - /tmp:rw,noexec,nosuid,size=64m
+      - /var/cache/nginx:rw,nosuid,size=32m
     volumes:
       - php-socket:/var/run/php
       - uploads:/var/www/html/web/app/uploads
@@ -31,7 +32,6 @@ services:
       - ALL
     tmpfs:
       - /tmp:rw,noexec,nosuid,size=128m
-      - /var/run/php:rw,nosuid,size=8m
     volumes:
       - php-socket:/var/run/php
       - uploads:/var/www/html/web/app/uploads
