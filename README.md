@@ -49,6 +49,21 @@ To stop:
 make down
 ```
 
+### Optional: local HTTPS (TLS)
+
+This repo includes an optional Caddy reverse proxy for local HTTPS:
+
+```bash
+# Update .env so WP_HOME/WP_SITEURL use https://wp.localhost:8443
+make bootstrap-tls
+```
+
+URL:
+
+- https://wp.localhost:8443
+
+Note: Caddy uses a locally-generated certificate (browser will warn). For a trusted cert, use `mkcert` and configure Caddy with your generated certs.
+
 ### Optional profiles (dev conveniences)
 
 ```bash

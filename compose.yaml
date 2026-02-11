@@ -23,6 +23,23 @@ services:
       retries: 10
 
   # ---------------------------------------------------------------------------
+  # Optional: TLS reverse proxy for local dev.
+  # URL: https://wp.localhost:8443
+  # ---------------------------------------------------------------------------
+  caddy:
+    image: caddy:2-alpine
+    profiles: ["tls"]
+    ports:
+      - "8443:8443"
+    volumes:
+      - ./docker/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      web:
+        condition: service_healthy
+
+  # ---------------------------------------------------------------------------
   # PHP-FPM - Bedrock + WordPress via Composer.
   # ---------------------------------------------------------------------------
   php:
@@ -170,4 +187,6 @@ volumes:
   php-socket:
   uploads:
   cache:
+  caddy-data:
+  caddy-config:
 

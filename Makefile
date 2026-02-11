@@ -4,7 +4,7 @@ COMPOSE ?= docker compose
 RUN_USER ?= $(shell id -u 2>/dev/null || echo 1000):$(shell id -g 2>/dev/null || echo 1000)
 
 .PHONY: help install composer-install up down restart ps logs shell up-mail up-dbadmin up-observability wp composer
-.PHONY: bootstrap env wait wp-install
+.PHONY: bootstrap env wait wp-install up-tls bootstrap-tls
 
 help: ## Show available targets
 	@awk 'BEGIN {FS = ":.*##"} /^[a-zA-Z0-9_.-]+:.*##/ {printf "\033[36m%-22s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -36,6 +36,16 @@ bootstrap: ## One-command local bootstrap (env + deps + up + wait + wp-install)
 	$(MAKE) env
 	$(MAKE) composer-install
 	$(MAKE) up
+	$(MAKE) wait
+	$(MAKE) wp-install
+
+up-tls: ## Start dev stack + local TLS proxy (https://wp.localhost:8443)
+	$(COMPOSE) --profile tls up -d --build
+
+bootstrap-tls: ## Bootstrap stack + local TLS proxy (requires WP_HOME/WP_SITEURL set to https://wp.localhost:8443)
+	$(MAKE) env
+	$(MAKE) composer-install
+	$(MAKE) up-tls
 	$(MAKE) wait
 	$(MAKE) wp-install
 
