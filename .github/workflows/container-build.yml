@@ -117,6 +117,20 @@ jobs:
           vuln-type: os,library
           severity: CRITICAL
 
+      - name: Install Cosign
+        if: github.event_name != 'pull_request'
+        uses: sigstore/cosign-installer@v4.0.0
+        with:
+          cosign-release: v3.0.4
+
+      - name: Cosign sign images (keyless)
+        if: github.event_name != 'pull_request'
+        env:
+          COSIGN_YES: "true"
+        run: |
+          cosign sign "${{ env.REGISTRY }}/${{ env.IMAGE_PHP }}@${{ steps.build_php.outputs.digest }}"
+          cosign sign "${{ env.REGISTRY }}/${{ env.IMAGE_NGINX }}@${{ steps.build_nginx.outputs.digest }}"
+
       - name: Write digests to summary
         if: github.event_name != 'pull_request'
         run: |
