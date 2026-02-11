@@ -158,6 +158,10 @@ Recommended approaches:
 
 See `docs/kubernetes/` for templates and required keys.
 
+## Supply chain / image verification
+
+CI signs published images (keyless Cosign). See `docs/supply-chain/cosign.md`.
+
 ---
 
 ## License
