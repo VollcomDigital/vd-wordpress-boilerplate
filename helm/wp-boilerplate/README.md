@@ -83,3 +83,18 @@ cron:
   schedule: "*/5 * * * *"
 ```
 
+## Metrics (optional)
+
+This chart can run a `php-fpm_exporter` sidecar (Prometheus) and optionally create a `ServiceMonitor`.
+
+Example:
+
+```yaml
+metrics:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+    labels:
+      release: prometheus
+```
+

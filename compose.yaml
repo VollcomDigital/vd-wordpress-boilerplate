@@ -181,6 +181,21 @@ services:
       web:
         condition: service_healthy
 
+  php-fpm-exporter:
+    image: hipages/php-fpm_exporter:v2.2.0
+    profiles: ["observability"]
+    user: "101:101"
+    environment:
+      PHP_FPM_SCRAPE_URI: unix:///var/run/php/php-fpm.sock;/status
+      PHP_FPM_FIX_PROCESS_COUNT: "true"
+    volumes:
+      - php-socket:/var/run/php:ro
+    ports:
+      - "9253:9253"
+    depends_on:
+      php:
+        condition: service_started
+
 volumes:
   db-data:
   redis-data:

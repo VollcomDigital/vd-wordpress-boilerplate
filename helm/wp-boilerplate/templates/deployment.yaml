@@ -108,3 +108,31 @@ spec:
           resources:
             {{- toYaml .Values.resources.php | nindent 12 }}
 
+        {{- if .Values.metrics.enabled }}
+        - name: php-fpm-exporter
+          image: "{{ .Values.metrics.phpFpmExporter.image }}:{{ .Values.metrics.phpFpmExporter.tag }}"
+          imagePullPolicy: {{ .Values.metrics.phpFpmExporter.pullPolicy }}
+          ports:
+            - name: metrics
+              containerPort: {{ .Values.metrics.phpFpmExporter.port }}
+          env:
+            - name: PHP_FPM_SCRAPE_URI
+              value: "unix:///var/run/php/php-fpm.sock;/status"
+            - name: PHP_FPM_FIX_PROCESS_COUNT
+              value: "true"
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 101
+            runAsGroup: 101
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: php-socket
+              mountPath: /var/run/php
+              readOnly: true
+          resources:
+            {{- toYaml .Values.metrics.phpFpmExporter.resources | nindent 12 }}
+        {{- end }}
+
