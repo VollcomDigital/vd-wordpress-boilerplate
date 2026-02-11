@@ -1,0 +1,164 @@
+services:
+  # ---------------------------------------------------------------------------
+  # Web server (Nginx) - serves static files and forwards PHP to php-fpm socket.
+  # ---------------------------------------------------------------------------
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: nginx-dev
+    ports:
+      - "8080:8080"
+    depends_on:
+      - php
+    volumes:
+      - ./:/var/www/html:ro
+      - php-socket:/var/run/php
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/healthz >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+  # ---------------------------------------------------------------------------
+  # PHP-FPM - Bedrock + WordPress via Composer.
+  # ---------------------------------------------------------------------------
+  php:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: php-dev
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./:/var/www/html
+      - php-socket:/var/run/php
+
+  # ---------------------------------------------------------------------------
+  # Database
+  # ---------------------------------------------------------------------------
+  db:
+    image: mariadb:11.4
+    environment:
+      MARIADB_DATABASE: ${DB_NAME:-wordpress}
+      MARIADB_USER: ${DB_USER:-wordpress}
+      MARIADB_PASSWORD: ${DB_PASSWORD:-wordpress}
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root}
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mariadb-admin ping -h 127.0.0.1 -u root -p$$MARIADB_ROOT_PASSWORD --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # ---------------------------------------------------------------------------
+  # Redis (optional object cache)
+  # ---------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--save", "60", "1", "--loglevel", "warning"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+  # ---------------------------------------------------------------------------
+  # Optional: MailHog (captures outgoing email for local dev)
+  # UI: http://localhost:8025
+  # ---------------------------------------------------------------------------
+  mailhog:
+    image: mailhog/mailhog:v1.0.1
+    profiles: ["mail"]
+    ports:
+      - "8025:8025"
+      - "1025:1025"
+
+  # ---------------------------------------------------------------------------
+  # Optional: phpMyAdmin (dev-only DB admin)
+  # UI: http://localhost:8081
+  # ---------------------------------------------------------------------------
+  phpmyadmin:
+    image: phpmyadmin:5
+    profiles: ["dbadmin"]
+    environment:
+      PMA_HOST: db
+      PMA_USER: ${DB_USER:-wordpress}
+      PMA_PASSWORD: ${DB_PASSWORD:-wordpress}
+    ports:
+      - "8081:80"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # ---------------------------------------------------------------------------
+  # Optional tools (run on-demand via `make wp ...` / `make composer ...`)
+  # ---------------------------------------------------------------------------
+  wp:
+    image: wordpress:cli-php8.3
+    profiles: ["tools"]
+    env_file:
+      - .env
+    working_dir: /var/www/html
+    volumes:
+      - ./:/var/www/html
+    depends_on:
+      db:
+        condition: service_healthy
+
+  composer:
+    image: composer:2
+    profiles: ["tools"]
+    working_dir: /var/www/html
+    volumes:
+      - ./:/var/www/html
+
+  # ---------------------------------------------------------------------------
+  # Optional observability: exporters (Prometheus scrape targets)
+  # ---------------------------------------------------------------------------
+  redis-exporter:
+    image: oliver006/redis_exporter:latest
+    profiles: ["observability"]
+    environment:
+      REDIS_ADDR: redis://redis:6379
+    ports:
+      - "9121:9121"
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  mysqld-exporter:
+    image: prom/mysqld-exporter:latest
+    profiles: ["observability"]
+    environment:
+      DATA_SOURCE_NAME: root:${DB_ROOT_PASSWORD:-root}@(db:3306)/
+    ports:
+      - "9104:9104"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  nginx-exporter:
+    image: nginx/nginx-prometheus-exporter:latest
+    profiles: ["observability"]
+    command:
+      - "--nginx.scrape-uri=http://web:8080/nginx_status"
+    ports:
+      - "9113:9113"
+    depends_on:
+      web:
+        condition: service_healthy
+
+volumes:
+  db-data:
+  redis-data:
+  php-socket:
+

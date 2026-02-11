@@ -1,0 +1,18 @@
+.git
+.github
+helm
+
+.env
+.env.*
+
+node_modules
+
+# Local/IDE noise
+.idea
+.vscode
+.DS_Store
+
+# Composer install output (built inside Docker)
+vendor
+web/wp
+
