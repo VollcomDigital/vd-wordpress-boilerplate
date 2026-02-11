@@ -130,6 +130,26 @@ Config::define('WP_REDIS_PASSWORD', env('WP_REDIS_PASSWORD') ?: null);
 Config::define('WP_REDIS_DATABASE', env('WP_REDIS_DATABASE') ?: 0);
 Config::define('WP_REDIS_PREFIX', env('WP_REDIS_PREFIX') ?: $table_prefix);
 
+// Uploads offload (S3-compatible) - plugin required (e.g. humanmade/s3-uploads).
+if ($bucket = env('S3_UPLOADS_BUCKET')) {
+    Config::define('S3_UPLOADS_BUCKET', $bucket);
+
+    foreach ([
+        'S3_UPLOADS_REGION',
+        'S3_UPLOADS_BUCKET_URL',
+        'S3_UPLOADS_KEY',
+        'S3_UPLOADS_SECRET',
+        'S3_UPLOADS_ENDPOINT',
+        'S3_UPLOADS_PATH_STYLE_ENDPOINT',
+        'S3_UPLOADS_USE_INSTANCE_PROFILE',
+    ] as $key) {
+        $value = env($key);
+        if ($value !== null && $value !== '') {
+            Config::define($key, $value);
+        }
+    }
+}
+
 /**
  * Custom settings / hardening
  */

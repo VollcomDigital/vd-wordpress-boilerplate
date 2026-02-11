@@ -55,6 +55,8 @@ Expected Secret keys include:
 
 Use a uploads offload plugin (example: `humanmade/s3-uploads`) so you can scale replicas without shared storage.
 
+See: `docs/kubernetes/uploads-s3.md`
+
 ### Alternative: PVC
 
 Set:

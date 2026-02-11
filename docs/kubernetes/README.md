@@ -20,4 +20,5 @@ See:
 - `docs/kubernetes/secrets-required.md`
 - `docs/kubernetes/external-secrets/`
 - `docs/kubernetes/sealed-secrets/`
+- `docs/kubernetes/uploads-s3.md`
 

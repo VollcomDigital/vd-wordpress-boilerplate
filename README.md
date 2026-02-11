@@ -123,6 +123,8 @@ Preferred (cloud-native): use an S3-compatible uploads plugin (no shared PVC req
 
 Alternative (simple clusters): enable the chart's `uploads.persistence` option to mount a PVC.
 
+Details: `docs/kubernetes/uploads-s3.md`
+
 ---
 
 ## WP-Cron (Production)
