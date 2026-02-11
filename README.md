@@ -22,7 +22,7 @@ A production-minded WordPress boilerplate based on **[Roots Bedrock](https://roo
 
 ```bash
 cp .env.example .env
-make up
+make install
 ```
 
 Then open:
@@ -59,6 +59,15 @@ This boilerplate provides:
 - Secure-by-default runtime posture (drop caps, no privilege escalation, read-only root filesystem where possible)
 
 Images are intended to be built in CI and deployed **by digest** (build once, deploy everywhere).
+
+### Branch-based images
+
+The included GitHub Actions workflow builds and publishes images for each branch:
+
+- `ghcr.io/<owner>/<repo>-php:<branch>`
+- `ghcr.io/<owner>/<repo>-nginx:<branch>`
+
+For production, prefer pinning by **digest** instead of tags.
 
 ---
 

@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: ["main"]
+
+permissions:
+  contents: read
+
+jobs:
+  php:
+    name: Composer validate / lint / audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          tools: composer:v2
+          coverage: none
+          extensions: intl, mbstring, curl, zip
+          ini-values: memory_limit=512M
+
+      - name: Composer validate
+        run: composer validate --strict
+
+      - name: Composer install (dev)
+        run: composer install --no-interaction --no-progress
+
+      - name: Lint (Pint)
+        run: composer lint
+
+      - name: Composer audit
+        run: composer audit
+
