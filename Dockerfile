@@ -97,32 +97,56 @@ EXPOSE 9000
 CMD ["php-fpm", "-F"]
 
 # -----------------------------------------------------------------------------
-# PHP dev (includes Composer + dev-friendly OPcache)
+# PHP dev (no app baked; intended for bind-mount local source)
 # -----------------------------------------------------------------------------
-FROM php-runtime AS php-dev
+FROM php-base AS php-dev
 
-USER root
-COPY --from=composer /usr/bin/composer /usr/local/bin/composer
+WORKDIR /var/www/html
+
+RUN addgroup -g 10001 -S app && adduser -u 10001 -S -G app app
+
+RUN rm -f /usr/local/etc/php-fpm.d/www.conf
+COPY docker/php/fpm-pool.conf /usr/local/etc/php-fpm.d/zz-app.conf
+
+COPY docker/php/php.ini /usr/local/etc/php/php.ini
+COPY docker/php/conf.d/50-apcu.ini /usr/local/etc/php/conf.d/50-apcu.ini
 COPY docker/php/conf.d/99-opcache-dev.ini /usr/local/etc/php/conf.d/99-opcache.ini
+COPY --from=composer /usr/bin/composer /usr/local/bin/composer
+
+RUN mkdir -p /tmp /var/run/php /var/www/html/web/app/uploads /var/www/html/web/app/cache && \
+  chown -R app:app /var/run/php /var/www/html/web/app/uploads /var/www/html/web/app/cache
+
 USER app
 
+EXPOSE 9000
+
+CMD ["php-fpm", "-F"]
+
 # -----------------------------------------------------------------------------
-# Nginx runtime (non-root)
+# Nginx base (non-root)
 # -----------------------------------------------------------------------------
-FROM nginxinc/nginx-unprivileged:${NGINX_VERSION}-alpine AS nginx-runtime
+FROM nginxinc/nginx-unprivileged:${NGINX_VERSION}-alpine AS nginx-base
 
 WORKDIR /var/www/html
 
 USER root
 COPY docker/nginx/conf.d/default.conf /etc/nginx/conf.d/default.conf
 COPY docker/nginx/snippets/ /etc/nginx/snippets/
-COPY --from=build --chown=101:101 /var/www/html/web /var/www/html/web
 USER 101
 
 EXPOSE 8080
 
 # -----------------------------------------------------------------------------
-# Nginx dev (same image; source is bind-mounted in Compose)
+# Nginx runtime (bakes Bedrock web/ for immutable deployments)
 # -----------------------------------------------------------------------------
-FROM nginx-runtime AS nginx-dev
+FROM nginx-base AS nginx-runtime
+
+USER root
+COPY --from=build --chown=101:101 /var/www/html/web /var/www/html/web
+USER 101
+
+# -----------------------------------------------------------------------------
+# Nginx dev (no app baked; intended for bind-mount local source)
+# -----------------------------------------------------------------------------
+FROM nginx-base AS nginx-dev
 
