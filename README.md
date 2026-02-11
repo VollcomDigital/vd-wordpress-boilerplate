@@ -29,6 +29,12 @@ Then open:
 
 - http://localhost:8080
 
+Complete the WordPress installer in the browser, or (optional) use WP-CLI:
+
+```bash
+make wp ARGS="core install --url=http://localhost:8080 --title=Boilerplate --admin_user=admin --admin_password=admin --admin_email=admin@example.com --skip-email"
+```
+
 To stop:
 
 ```bash
@@ -70,6 +76,17 @@ The included GitHub Actions workflow builds and publishes images for each branch
 For production, prefer pinning by **digest** instead of tags.
 
 ---
+
+## Configuration (12-factor)
+
+- Local dev uses a `.env` file (see `.env.example`).
+- Production should set env vars via **Kubernetes Secrets/ConfigMaps** (do not bake secrets into images).
+
+Common toggles:
+
+- `DISABLE_WP_CRON=true` (production)
+- `DISALLOW_FILE_MODS=true` (production hardening)
+- `WP_CACHE=true` + `WP_REDIS_HOST=...` (optional Redis object cache; plugin required)
 
 ## Deploy to Kubernetes (Helm)
 
