@@ -1,0 +1,72 @@
+{
+  "name": "cloud-native/wordpress-bedrock-boilerplate",
+  "type": "project",
+  "license": "MIT",
+  "description": "Modern cloud-native WordPress boilerplate built on Roots Bedrock",
+  "keywords": [
+    "bedrock",
+    "composer",
+    "wordpress",
+    "docker",
+    "kubernetes",
+    "helm"
+  ],
+  "repositories": [
+    {
+      "name": "wpackagist",
+      "type": "composer",
+      "url": "https://wpackagist.org",
+      "only": [
+        "wpackagist-plugin/*",
+        "wpackagist-theme/*"
+      ]
+    }
+  ],
+  "require": {
+    "php": ">=8.2",
+    "composer/installers": "^2.2",
+    "oscarotero/env": "^2.1",
+    "roots/bedrock-autoloader": "^1.0",
+    "roots/bedrock-disallow-indexing": "^2.0",
+    "roots/wordpress": "6.9.1",
+    "roots/wp-config": "1.0.0",
+    "vlucas/phpdotenv": "^5.6"
+  },
+  "require-dev": {
+    "laravel/pint": "^1.18"
+  },
+  "config": {
+    "optimize-autoloader": true,
+    "preferred-install": "dist",
+    "allow-plugins": {
+      "composer/installers": true,
+      "roots/wordpress-core-installer": true
+    }
+  },
+  "minimum-stability": "dev",
+  "prefer-stable": true,
+  "extra": {
+    "installer-paths": {
+      "web/app/mu-plugins/{$name}/": [
+        "type:wordpress-muplugin"
+      ],
+      "web/app/plugins/{$name}/": [
+        "type:wordpress-plugin"
+      ],
+      "web/app/themes/{$name}/": [
+        "type:wordpress-theme"
+      ]
+    },
+    "wordpress-install-dir": "web/wp"
+  },
+  "scripts": {
+    "lint": "pint --test",
+    "lint:fix": "pint",
+    "security:audit": "composer audit"
+  },
+  "suggest": {
+    "wpackagist-plugin/redis-cache": "Redis-backed object cache plugin (enable WP_CACHE + WP_REDIS_* env vars)",
+    "humanmade/s3-uploads": "S3-compatible uploads offload (recommended for Kubernetes)"
+  }
+}
+
