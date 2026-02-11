@@ -14,8 +14,10 @@ services:
     volumes:
       - ./:/var/www/html:ro
       - php-socket:/var/run/php
+      - uploads:/var/www/html/web/app/uploads
+      - cache:/var/www/html/web/app/cache
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/healthz >/dev/null 2>&1 || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/ping >/dev/null 2>&1 || exit 1"]
       interval: 10s
       timeout: 3s
       retries: 10
@@ -28,6 +30,9 @@ services:
       context: .
       dockerfile: Dockerfile
       target: php-dev
+      args:
+        APP_UID: ${APP_UID:-1000}
+        APP_GID: ${APP_GID:-1000}
     env_file:
       - .env
     depends_on:
@@ -38,6 +43,8 @@ services:
     volumes:
       - ./:/var/www/html
       - php-socket:/var/run/php
+      - uploads:/var/www/html/web/app/uploads
+      - cache:/var/www/html/web/app/cache
 
   # ---------------------------------------------------------------------------
   # Database
@@ -161,4 +168,6 @@ volumes:
   db-data:
   redis-data:
   php-socket:
+  uploads:
+  cache:
 

@@ -22,17 +22,25 @@ A production-minded WordPress boilerplate based on **[Roots Bedrock](https://roo
 
 ```bash
 cp .env.example .env
-make install
+make bootstrap
 ```
 
 Then open:
 
 - http://localhost:8080
 
-Complete the WordPress installer in the browser, or (optional) use WP-CLI:
+`make bootstrap` also runs a WP-CLI install if the site isn't installed yet.
+Defaults (override in `.env`):
+
+- `WP_SITE_TITLE` (default: `Boilerplate`)
+- `WP_ADMIN_USER` (default: `admin`)
+- `WP_ADMIN_PASSWORD` (default: `admin`)
+- `WP_ADMIN_EMAIL` (default: `admin@example.com`)
+
+You can re-run:
 
 ```bash
-make wp ARGS="core install --url=http://localhost:8080 --title=Boilerplate --admin_user=admin --admin_password=admin --admin_email=admin@example.com --skip-email"
+make wp-install
 ```
 
 To stop:
