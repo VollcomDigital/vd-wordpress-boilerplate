@@ -40,6 +40,24 @@ services:
         condition: service_healthy
 
   # ---------------------------------------------------------------------------
+  # Optional: TLS reverse proxy with mkcert-provided trusted certs.
+  # URL: https://wp.localhost:8443
+  # ---------------------------------------------------------------------------
+  caddy-mkcert:
+    image: caddy:2-alpine
+    profiles: ["tls-trusted"]
+    ports:
+      - "8443:8443"
+    volumes:
+      - ./docker/caddy/Caddyfile.mkcert:/etc/caddy/Caddyfile:ro
+      - ./.certs:/certs:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      web:
+        condition: service_healthy
+
+  # ---------------------------------------------------------------------------
   # PHP-FPM - Bedrock + WordPress via Composer.
   # ---------------------------------------------------------------------------
   php:

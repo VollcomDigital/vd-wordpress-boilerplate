@@ -51,18 +51,33 @@ make down
 
 ### Optional: local HTTPS (TLS)
 
-This repo includes an optional Caddy reverse proxy for local HTTPS:
+This repo includes optional Caddy reverse-proxy profiles for local HTTPS:
+
+**Option A: quick internal CA (browser warns)**
 
 ```bash
 # Update .env so WP_HOME/WP_SITEURL use https://wp.localhost:8443
 make bootstrap-tls
 ```
 
+**Option B: trusted certs with mkcert (recommended for local UX)**
+
+```bash
+# Requires mkcert installed on your machine
+make bootstrap-tls-trusted
+```
+
 URL:
 
 - https://wp.localhost:8443
 
-Note: Caddy uses a locally-generated certificate (browser will warn). For a trusted cert, use `mkcert` and configure Caddy with your generated certs.
+Notes:
+
+- For trusted TLS, `make certs-mkcert` generates local cert files under `.certs/` (gitignored).
+- Set in `.env`:
+  - `WP_HOME=https://wp.localhost:8443`
+  - `WP_SITEURL=https://wp.localhost:8443/wp`
+- Detailed guide: `docs/local-dev/tls-mkcert.md`
 
 ### Optional profiles (dev conveniences)
 

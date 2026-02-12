@@ -4,7 +4,7 @@ COMPOSE ?= docker compose
 RUN_USER ?= $(shell id -u 2>/dev/null || echo 1000):$(shell id -g 2>/dev/null || echo 1000)
 
 .PHONY: help install composer-install up down restart ps logs shell up-mail up-dbadmin up-observability wp composer
-.PHONY: bootstrap env wait wp-install up-tls bootstrap-tls
+.PHONY: bootstrap env wait wp-install up-tls bootstrap-tls certs-mkcert up-tls-trusted bootstrap-tls-trusted
 
 help: ## Show available targets
 	@awk 'BEGIN {FS = ":.*##"} /^[a-zA-Z0-9_.-]+:.*##/ {printf "\033[36m%-22s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -46,6 +46,24 @@ bootstrap-tls: ## Bootstrap stack + local TLS proxy (requires WP_HOME/WP_SITEURL
 	$(MAKE) env
 	$(MAKE) composer-install
 	$(MAKE) up-tls
+	$(MAKE) wait
+	$(MAKE) wp-install
+
+certs-mkcert: ## Generate trusted local certs for wp.localhost using mkcert
+	@command -v mkcert >/dev/null 2>&1 || { echo "mkcert not found. Install it first: https://github.com/FiloSottile/mkcert"; exit 1; }
+	@mkdir -p .certs
+	@mkcert -install
+	@mkcert -cert-file .certs/wp.localhost.pem -key-file .certs/wp.localhost-key.pem wp.localhost
+	@echo "Generated .certs/wp.localhost.pem and .certs/wp.localhost-key.pem"
+
+up-tls-trusted: ## Start dev stack + trusted local TLS proxy (mkcert)
+	$(COMPOSE) --profile tls-trusted up -d --build
+
+bootstrap-tls-trusted: ## Bootstrap stack + trusted local TLS (runs mkcert first)
+	$(MAKE) env
+	$(MAKE) certs-mkcert
+	$(MAKE) composer-install
+	$(MAKE) up-tls-trusted
 	$(MAKE) wait
 	$(MAKE) wp-install
 

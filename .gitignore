@@ -38,3 +38,6 @@ node_modules
 .idea
 .vscode
 
+# Local TLS certs (mkcert)
+.certs/
+
