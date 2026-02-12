@@ -24,6 +24,7 @@ A production-minded WordPress boilerplate based on **[Roots Bedrock](https://roo
 cp .env.example .env
 make doctor
 make bootstrap
+make smoke
 ```
 
 Then open:
