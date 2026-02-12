@@ -4,13 +4,16 @@ COMPOSE ?= docker compose
 RUN_USER ?= $(shell id -u 2>/dev/null || echo 1000):$(shell id -g 2>/dev/null || echo 1000)
 
 .PHONY: help install composer-install up down restart ps logs shell up-mail up-dbadmin up-observability wp composer
-.PHONY: bootstrap env wait wp-install up-tls bootstrap-tls certs-mkcert up-tls-trusted bootstrap-tls-trusted
+.PHONY: bootstrap env wait wp-install up-tls bootstrap-tls certs-mkcert up-tls-trusted bootstrap-tls-trusted doctor
 
 help: ## Show available targets
 	@awk 'BEGIN {FS = ":.*##"} /^[a-zA-Z0-9_.-]+:.*##/ {printf "\033[36m%-22s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
 env: ## Create .env from .env.example if missing
 	@if [ -f .env ]; then echo ".env exists"; else cp .env.example .env && echo "Created .env from .env.example"; fi
+
+doctor: ## Preflight checks (docker, compose, ports, env, optional mkcert)
+	@bash scripts/doctor.sh
 
 up: ## Start dev stack (build + up)
 	$(COMPOSE) up -d --build

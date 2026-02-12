@@ -22,6 +22,7 @@ A production-minded WordPress boilerplate based on **[Roots Bedrock](https://roo
 
 ```bash
 cp .env.example .env
+make doctor
 make bootstrap
 ```
 
