@@ -64,11 +64,7 @@ jobs:
         run: make bootstrap
 
       - name: Smoke checks
-        run: |
-          set -euo pipefail
-          curl -fsS http://localhost:8080/ping >/dev/null
-          curl -fsS http://localhost:8080/wp/wp-login.php | rg -qi "user_login|wordpress"
-          make wp ARGS="core is-installed --path=web/wp"
+        run: make smoke
 
       - name: Compose status/logs on failure
         if: failure()
