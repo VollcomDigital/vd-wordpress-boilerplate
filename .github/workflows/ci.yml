@@ -37,6 +37,49 @@ jobs:
       - name: Composer audit
         run: composer audit
 
+  local-smoke:
+    name: Local stack smoke (Docker Compose)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare local .env for CI
+        run: |
+          cp .env.example .env
+          echo "APP_UID=$(id -u)" >> .env
+          echo "APP_GID=$(id -g)" >> .env
+          echo "WP_ADMIN_PASSWORD=ci-smoke-password" >> .env
+
+      - name: Docker versions
+        run: |
+          docker version
+          docker compose version
+
+      - name: Doctor preflight
+        run: make doctor
+
+      - name: Bootstrap stack
+        run: make bootstrap
+
+      - name: Smoke checks
+        run: |
+          set -euo pipefail
+          curl -fsS http://localhost:8080/ping >/dev/null
+          curl -fsS http://localhost:8080/wp/wp-login.php | rg -qi "user_login|wordpress"
+          make wp ARGS="core is-installed --path=web/wp"
+
+      - name: Compose status/logs on failure
+        if: failure()
+        run: |
+          docker compose ps
+          docker compose logs --no-color --tail=200
+
+      - name: Teardown
+        if: always()
+        run: docker compose down -v --remove-orphans
+
   helm:
     name: Helm lint / template
     runs-on: ubuntu-latest
