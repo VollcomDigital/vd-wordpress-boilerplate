@@ -97,7 +97,7 @@ jobs:
 
       - name: Trivy scan (php image)
         if: github.event_name != 'pull_request'
-        uses: aquasecurity/trivy-action@0.33.1
+        uses: aquasecurity/trivy-action@0.34.0
         with:
           image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_PHP }}@${{ steps.build_php.outputs.digest }}
           format: table
@@ -108,7 +108,7 @@ jobs:
 
       - name: Trivy scan (nginx image)
         if: github.event_name != 'pull_request'
-        uses: aquasecurity/trivy-action@0.33.1
+        uses: aquasecurity/trivy-action@0.34.0
         with:
           image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NGINX }}@${{ steps.build_nginx.outputs.digest }}
           format: table
