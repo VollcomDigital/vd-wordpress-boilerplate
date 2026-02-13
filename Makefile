@@ -4,7 +4,7 @@ COMPOSE ?= docker compose
 RUN_USER ?= $(shell id -u 2>/dev/null || echo 1000):$(shell id -g 2>/dev/null || echo 1000)
 
 .PHONY: help install composer-install up down restart ps logs shell up-mail up-dbadmin up-observability wp composer
-.PHONY: bootstrap env wait wp-install up-tls bootstrap-tls certs-mkcert up-tls-trusted bootstrap-tls-trusted doctor smoke smoke-full
+.PHONY: bootstrap env wait wp-install up-tls bootstrap-tls certs-mkcert up-tls-trusted bootstrap-tls-trusted doctor smoke smoke-full qa
 
 help: ## Show available targets
 	@awk 'BEGIN {FS = ":.*##"} /^[a-zA-Z0-9_.-]+:.*##/ {printf "\033[36m%-22s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -22,6 +22,9 @@ smoke-full: ## Doctor + bootstrap + smoke checks
 	$(MAKE) doctor
 	$(MAKE) bootstrap
 	$(MAKE) smoke
+
+qa: ## Full QA: composer checks + docker smoke-full when available
+	@bash scripts/qa.sh
 
 up: ## Start dev stack (build + up)
 	$(COMPOSE) up -d --build

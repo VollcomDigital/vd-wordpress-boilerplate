@@ -21,3 +21,9 @@ The CI builds branch-scoped container images and (on `main`) produces stable ima
 
 See the repository README for Docker Compose commands.
 
+Before opening a PR, run:
+
+```bash
+make qa
+```
+

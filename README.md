@@ -25,6 +25,8 @@ cp .env.example .env
 make doctor
 make bootstrap
 make smoke
+# Full pre-push QA bundle (runs composer checks; runs smoke-full when Docker is available)
+make qa
 ```
 
 Then open:
