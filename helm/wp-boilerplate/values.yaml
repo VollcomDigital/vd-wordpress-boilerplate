@@ -47,6 +47,9 @@ service:
   port: 80
   targetPort: 8080
 
+# Kubernetes cluster DNS domain.
+clusterDomain: cluster.local
+
 ingress:
   enabled: false
   className: ""

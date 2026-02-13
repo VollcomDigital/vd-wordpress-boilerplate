@@ -166,8 +166,8 @@ Config::define('DISALLOW_FILE_EDIT', true);
 // Override in development/staging config if needed.
 Config::define('DISALLOW_FILE_MODS', env('DISALLOW_FILE_MODS') ?? true);
 
-// Limit the number of post revisions.
-Config::define('WP_POST_REVISIONS', env('WP_POST_REVISIONS') ?? true);
+// Limit the number of post revisions (avoid unbounded revision growth by default).
+Config::define('WP_POST_REVISIONS', env('WP_POST_REVISIONS') ?? 25);
 
 // Disable script concatenation (avoid surprises behind CDNs/proxies).
 Config::define('CONCATENATE_SCRIPTS', false);

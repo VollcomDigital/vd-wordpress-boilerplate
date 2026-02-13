@@ -23,14 +23,19 @@ require_cmd() {
 check_port_free() {
   local port="$1"
   local label="$2"
+  local severity="${3:-error}"
 
   if ! command -v ss >/dev/null 2>&1; then
     add_warning "Cannot check port $port ($label): 'ss' command not found."
     return
   fi
 
-  if ss -ltnH "sport = :$port" | rg -q .; then
-    add_error "Port $port is already in use ($label)."
+  if ss -ltnH "sport = :$port" | grep -q .; then
+    if [[ "$severity" == "warning" ]]; then
+      add_warning "Port $port is already in use ($label)."
+    else
+      add_error "Port $port is already in use ($label)."
+    fi
   fi
 }
 
@@ -43,7 +48,6 @@ print_section "WordPress Boilerplate Doctor"
 
 require_cmd docker
 require_cmd make
-require_cmd rg
 
 if command -v docker >/dev/null 2>&1; then
   if ! docker info >/dev/null 2>&1; then
@@ -81,9 +85,9 @@ else
 fi
 
 check_port_free 8080 "local HTTP (web)"
-check_port_free 8443 "local HTTPS (caddy)"
-check_port_free 8081 "phpMyAdmin profile"
-check_port_free 8025 "MailHog profile"
+check_port_free 8443 "local HTTPS (caddy profile)" warning
+check_port_free 8081 "phpMyAdmin profile" warning
+check_port_free 8025 "MailHog profile" warning
 
 print_section "Summary"
 

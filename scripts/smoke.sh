@@ -7,12 +7,7 @@ if ! command -v docker >/dev/null 2>&1; then
   exit 1
 fi
 
-if ! command -v rg >/dev/null 2>&1; then
-  echo "rg is required for smoke checks."
-  exit 1
-fi
-
-if ! docker compose ps --services --filter status=running | rg -q '^web$'; then
+if ! docker compose ps --services --filter status=running | grep -q '^web$'; then
   echo "web service is not running. Start the stack first (for example: make bootstrap)."
   exit 1
 fi
@@ -45,7 +40,7 @@ fetch_url "http://localhost:8080/ping" >/dev/null
 
 echo "Checking WordPress login page ..."
 login_page="$(fetch_url "http://localhost:8080/wp/wp-login.php")"
-if ! printf '%s' "$login_page" | rg -qi "user_login|wordpress"; then
+if ! printf '%s' "$login_page" | grep -Eqi "user_login|wordpress"; then
   echo "Unexpected response from wp-login page."
   exit 1
 fi

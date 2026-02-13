@@ -36,7 +36,7 @@ RUN set -eux; \
     gd \
   ; \
   pecl install redis apcu; \
-  docker-php-ext-enable redis apcu opcache; \
+  docker-php-ext-enable redis apcu; \
   apk del .build-deps
 
 # -----------------------------------------------------------------------------

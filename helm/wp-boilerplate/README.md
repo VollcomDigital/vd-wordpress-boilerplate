@@ -83,6 +83,12 @@ cron:
   schedule: "*/5 * * * *"
 ```
 
+If your cluster uses a non-default DNS domain, set:
+
+```yaml
+clusterDomain: cluster.local
+```
+
 ## Metrics (optional)
 
 This chart can run a `php-fpm_exporter` sidecar (Prometheus) and optionally create a `ServiceMonitor`.
