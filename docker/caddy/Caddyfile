@@ -1,0 +1,18 @@
+{
+	# Local development only.
+	# Caddy will generate a local (untrusted) certificate via its internal CA.
+	# For a trusted cert, use mkcert and configure Caddy with your cert files.
+	auto_https disable_redirects
+}
+
+# HTTPS dev endpoint:
+#   https://wp.localhost:8443
+wp.localhost:8443 {
+	tls internal
+
+	encode zstd gzip
+
+	# Reverse proxy to Nginx (which then fastcgi_pass to php-fpm).
+	reverse_proxy web:8080
+}
+

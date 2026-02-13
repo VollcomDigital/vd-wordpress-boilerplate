@@ -1,0 +1,14 @@
+{{- if .Values.pdb.enabled -}}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "wp-boilerplate.fullname" . }}
+  labels:
+    {{- include "wp-boilerplate.labels" . | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.pdb.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "wp-boilerplate.selectorLabels" . | nindent 6 }}
+{{- end }}
+

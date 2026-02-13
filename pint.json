@@ -1,0 +1,11 @@
+{
+  "preset": "psr12",
+  "exclude": [
+    "vendor",
+    "web/wp",
+    "web/app/mu-plugins",
+    "web/app/plugins",
+    "web/app/uploads"
+  ]
+}
+

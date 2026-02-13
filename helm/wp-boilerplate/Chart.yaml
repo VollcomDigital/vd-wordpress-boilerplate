@@ -1,0 +1,7 @@
+apiVersion: v2
+name: wp-boilerplate
+description: Cloud-native WordPress (Bedrock) boilerplate
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+

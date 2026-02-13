@@ -1,0 +1,43 @@
+# Application
+web/app/plugins/*
+!web/app/plugins/.gitkeep
+web/app/mu-plugins/*/
+web/app/themes/*
+!web/app/themes/starter-theme/
+!web/app/themes/starter-theme/**
+web/app/upgrade
+web/app/uploads/*
+!web/app/uploads/.gitkeep
+web/app/cache/*
+!web/app/cache/.gitkeep
+
+# WordPress (managed by Composer)
+web/wp
+web/.htaccess
+
+# Logs
+*.log
+
+# Dotenv
+.env
+.env.*
+!.env.example
+
+# Composer
+/vendor
+auth.json
+
+# WP-CLI
+wp-cli.local.yml
+
+# Node (if you add a frontend toolchain later)
+node_modules
+
+# OS / IDE
+.DS_Store
+.idea
+.vscode
+
+# Local TLS certs (mkcert)
+.certs/
+
