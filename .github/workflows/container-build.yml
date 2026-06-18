@@ -43,7 +43,7 @@ jobs:
 
       - name: Docker metadata (php)
         id: meta_php
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_PHP }}
           tags: |
@@ -70,7 +70,7 @@ jobs:
 
       - name: Docker metadata (nginx)
         id: meta_nginx
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NGINX }}
           tags: |
